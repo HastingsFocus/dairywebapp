@@ -17,33 +17,35 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="dashboard-layout">
+    <div className="min-h-screen bg-[#181818] font-sans text-[#E7E7E7]">
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={closeSidebar}
       />
 
-      {/* Main area */}
-      <div className="dashboard-main">
-        {/* Topbar */}
-        <Topbar onMenuClick={openSidebar} />
-
-        {/* Page content */}
-        <main className="dashboard-content">
-          <Outlet />
-        </main>
-      </div>
-
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <button
           type="button"
-          className="sidebar-overlay"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
           onClick={closeSidebar}
           aria-label="Close navigation menu"
         />
       )}
+
+      {/* Main dashboard area */}
+      <div className="min-h-screen min-w-0 lg:pl-[260px]">
+        {/* Topbar */}
+        <Topbar onMenuClick={openSidebar} />
+
+        {/* Page content */}
+        <main className="min-h-[calc(100vh-76px)] px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
+          <div className="mx-auto w-full max-w-[1600px]">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

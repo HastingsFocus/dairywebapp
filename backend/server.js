@@ -1,3 +1,4 @@
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -6,9 +7,9 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import passwordRoutes from "./routes/passwordRoutes.js";
+import milkRecordRoutes from "./routes/milkRecordRoutes.js";
 
 dotenv.config();
-
 
 connectDB();
 
@@ -24,14 +25,19 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/password", passwordRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/milk-records", milkRecordRoutes);
 
 app.use((req, res) => {
-  res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
+  res.status(404).json({
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
 });
 
 app.use((err, req, res, next) => {
   console.error("Server Error:", err);
-  res.status(err.status || 500).json({ message: err.message || "Internal server error" });
+  res.status(err.status || 500).json({
+    message: err.message || "Internal server error",
+  });
 });
 
 const PORT = process.env.PORT || 5000;

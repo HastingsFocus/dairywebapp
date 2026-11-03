@@ -14,7 +14,11 @@ import SetPassword from "../pages/auth/SetPassword";
 import Login from "../pages/auth/Login";
 import OwnerSignup from "../pages/auth/OwnerSignUp";
 import DashboardHome from "../pages/dashboard/DashboardHome";
+import OwnerMilkRecords from "../pages/owner/MilkRecords";
+
 import Farmers from "../pages/buyers/Farmers";
+import MilkRecords from "../pages/buyers/MilkRecords";
+import MyMilkRecords from "../pages/farmers/MyMilkRecords";
 
 const RoleHome = () => {
   const { user } = useAuth();
@@ -63,15 +67,15 @@ const AppRoutes = () => {
         element={user ? <RoleHome /> : <Login />}
       />
 
-      {/* Owner signup */}
       <Route
         path="/owner/signup"
         element={user ? <RoleHome /> : <OwnerSignup />}
       />
+
       <Route
-  path="/set-password/:token"
-  element={<SetPassword />}
-/>
+        path="/set-password/:token"
+        element={<SetPassword />}
+      />
 
       {/* Admin routes */}
       <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
@@ -87,33 +91,29 @@ const AppRoutes = () => {
         <Route element={<DashboardLayout />}>
           <Route path="/owner" element={<DashboardHome />} />
           <Route path="/owner/buyers" element={<Buyer />} />
+           <Route path="/owner/milk-records" element={<OwnerMilkRecords />} />
           <Route path="/owner/reports" element={<DashboardHome />} />
         </Route>
       </Route>
 
-      
-{/* Buyer routes */}
-<Route element={<ProtectedRoute allowedRoles={["buyer"]} />}>
-  <Route element={<DashboardLayout />}>
-    <Route path="/buyer" element={<DashboardHome />} />
-    <Route path="/buyer/farmers" element={<Farmers />} />
-    <Route
-      path="/buyer/milk-records"
-      element={<DashboardHome />}
-    />
-    <Route
-      path="/buyer/reports"
-      element={<DashboardHome />}
-    />
-  </Route>
-</Route>
-
+      {/* Buyer routes */}
+      <Route element={<ProtectedRoute allowedRoles={["buyer"]} />}>
+        <Route element={<DashboardLayout />}>
+          <Route path="/buyer" element={<DashboardHome />} />
+          <Route path="/buyer/farmers" element={<Farmers />} />
+          <Route path="/buyer/milk-records" element={<MilkRecords />} />
+          <Route path="/buyer/reports" element={<DashboardHome />} />
+        </Route>
+      </Route>
 
       {/* Farmer routes */}
       <Route element={<ProtectedRoute allowedRoles={["farmer"]} />}>
         <Route element={<DashboardLayout />}>
           <Route path="/farmer" element={<DashboardHome />} />
-          <Route path="/farmer/records" element={<DashboardHome />} />
+          <Route
+            path="/farmer/records"
+            element={<MyMilkRecords />}
+          />
         </Route>
       </Route>
 

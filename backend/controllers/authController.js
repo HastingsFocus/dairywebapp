@@ -27,21 +27,20 @@ export const loginAdmin = async (req, res) => {
 };
 
 
+
 export const registerOwner = async (req, res) => {
   try {
-    const { email, password, confirmPassword } = req.body;
+    const { fullName, email, password, confirmPassword } = req.body;
 
-    // 1. Validate required fields
-    if (!email || !password || !confirmPassword) {
+    if (!fullName || !email || !password || !confirmPassword) {
       return res.status(400).json({
-        message: "Email, password and confirm password are required.",
+        message: "Full name, email, password and confirm password are required.",
       });
     }
 
-    // 2. Normalize email
+    const normalizedName = fullName.trim();
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 3. Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(normalizedEmail)) {
@@ -50,21 +49,18 @@ export const registerOwner = async (req, res) => {
       });
     }
 
-    // 4. Validate password length
     if (password.length < 6) {
       return res.status(400).json({
         message: "Password must be at least 6 characters long.",
       });
     }
 
-    // 5. Confirm passwords match
     if (password !== confirmPassword) {
       return res.status(400).json({
         message: "Password and confirm password do not match.",
       });
     }
 
-    // 6. Check whether the email is already registered
     const existingUser = await User.findOne({
       email: normalizedEmail,
     });
@@ -75,11 +71,10 @@ export const registerOwner = async (req, res) => {
       });
     }
 
-    // 7. Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 8. Create the owner account
     const owner = await User.create({
+      fullName: normalizedName,
       email: normalizedEmail,
       password: hashedPassword,
       role: "owner",
@@ -87,21 +82,19 @@ export const registerOwner = async (req, res) => {
       passwordSet: true,
     });
 
-    // 9. Generate authentication token
     const token = generateToken(owner._id, owner.role);
 
-    // 10. Return the safe user details and token
     return res.status(201).json({
       message: "Owner account created successfully.",
       user: {
         id: owner._id,
+        fullName: owner.fullName,
         email: owner.email,
         role: owner.role,
       },
       token,
     });
   } catch (error) {
-    // Handle duplicate email race conditions
     if (error.code === 11000) {
       return res.status(409).json({
         message: "An account with this email already exists.",
