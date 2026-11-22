@@ -8,6 +8,10 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import passwordRoutes from "./routes/passwordRoutes.js";
 import milkRecordRoutes from "./routes/milkRecordRoutes.js";
+import milkPriceRoutes from "./routes/milkPriceRoutes.js";
+import financialReportRoutes from "./routes/financialReportRoutes.js";
+import loanRoutes from "./routes/loanRoutes.js";
+import settlementRoutes from "./routes/settlementRoutes.js";
 
 dotenv.config();
 
@@ -26,6 +30,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/password", passwordRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/milk-records", milkRecordRoutes);
+app.use("/api/milk-prices", milkPriceRoutes);
+app.use("/api/financial-reports", financialReportRoutes);
+app.use("/api/loans", loanRoutes);
+app.use("/api/settlements", settlementRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

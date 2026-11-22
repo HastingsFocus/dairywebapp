@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import MilkRecord from "../models/MilkRecord.js";
 import User from "../models/User.js";
+import MilkPrice from "../models/MilkPrice.js";
 
 const getMalawiDate = () => {
   return new Intl.DateTimeFormat("en-CA", {
@@ -34,6 +35,28 @@ const isValidMonth = (value) => {
   const [year, month] = value.split("-").map(Number);
 
   return year >= 1000 && month >= 1 && month <= 12;
+};
+
+const roundMoney = (amount) => Number(amount.toFixed(2));
+
+const calculateMilkEarnings = (quantityLitres, pricePerLitre) => {
+  const taxRate = 0.01;
+  const welfareDeduction = 350;
+
+  const grossAmount = roundMoney(quantityLitres * pricePerLitre);
+  const taxAmount = roundMoney(grossAmount * taxRate);
+  const netAmount = roundMoney(
+    grossAmount - taxAmount - welfareDeduction
+  );
+
+  return {
+    pricePerLitre,
+    grossAmount,
+    taxRate,
+    taxAmount,
+    welfareDeduction,
+    netAmount,
+  };
 };
 
 // Return the farmers the logged-in user is allowed to access.
@@ -177,17 +200,37 @@ export const createMilkRecord = async (req, res) => {
       });
     }
 
-    const record = await MilkRecord.create({
-      farmer: farmer._id,
-      buyer: req.user._id,
-      recordedBy: req.user._id,
-      recordDate: date,
-      quantityLitres: Number(quantityLitres),
-      sodaTest,
-      temperatureC: Number(temperatureC),
-      sourTest,
-      notes: notes?.trim() || "",
-    });
+    // Get the current buying price configured by the owner.
+const currentPrice = await MilkPrice.findOne({ key: "default" });
+
+if (!currentPrice) {
+  return res.status(409).json({
+    message:
+      "The milk buying price has not been configured. Please contact the owner.",
+  });
+}
+
+const quantity = Number(quantityLitres);
+
+const earnings = calculateMilkEarnings(
+  quantity,
+  currentPrice.pricePerLitre
+);
+
+const record = await MilkRecord.create({
+  farmer: farmer._id,
+  buyer: req.user._id,
+  recordedBy: req.user._id,
+  recordDate: date,
+  quantityLitres: quantity,
+
+  ...earnings,
+
+  sodaTest,
+  temperatureC: Number(temperatureC),
+  sourTest,
+  notes: notes?.trim() || "",
+});
 
     const populatedRecord = await MilkRecord.findById(record._id)
       .populate("farmer", "fullName email phone location")
@@ -366,6 +409,7 @@ export const getMilkSummary = async (req, res) => {
   }
 };
 
+
 export const updateMilkRecord = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
@@ -394,13 +438,43 @@ export const updateMilkRecord = async (req, res) => {
       });
     }
 
+    // Validate the submitted milk record fields.
     const validationError = validRecordFields(req.body);
 
     if (validationError) {
-      return res.status(400).json({ message: validationError });
+      return res.status(400).json({
+        message: validationError,
+      });
     }
 
+    // Older records without a saved buying price cannot be
+    // financially recalculated safely.
+    if (
+      !Number.isFinite(record.pricePerLitre) ||
+      record.pricePerLitre <= 0
+    ) {
+      return res.status(409).json({
+        message:
+          "This older record has no saved buying price. Its financial details must be reviewed before editing.",
+      });
+    }
+
+    // Update quantity using the original saved buying price.
     record.quantityLitres = Number(req.body.quantityLitres);
+
+    const earnings = calculateMilkEarnings(
+      record.quantityLitres,
+      record.pricePerLitre
+    );
+
+    // Recalculate financial values without changing the original price.
+    record.grossAmount = earnings.grossAmount;
+    record.taxRate = earnings.taxRate;
+    record.taxAmount = earnings.taxAmount;
+    record.welfareDeduction = earnings.welfareDeduction;
+    record.netAmount = earnings.netAmount;
+
+    // Update milk quality information.
     record.sodaTest = req.body.sodaTest;
     record.temperatureC = Number(req.body.temperatureC);
     record.sourTest = req.body.sourTest;
@@ -428,6 +502,7 @@ export const updateMilkRecord = async (req, res) => {
     });
   }
 };
+
 
 export const deleteMilkRecord = async (req, res) => {
   try {

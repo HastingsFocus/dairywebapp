@@ -22,7 +22,7 @@ const milkRecordSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Store the Malawi calendar date as YYYY-MM-DD.
+    // Malawi calendar date: YYYY-MM-DD.
     recordDate: {
       type: String,
       required: true,
@@ -33,6 +33,48 @@ const milkRecordSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0.01,
+    },
+
+    // Financial snapshots captured when this record is created.
+    pricePerLitre: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    grossAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    taxRate: {
+      type: Number,
+      required: true,
+      default: 0.01,
+    },
+
+    taxAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    welfareDeduction: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 350,
+    },
+
+    netAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
     },
 
     sodaTest: {
@@ -70,8 +112,9 @@ milkRecordSchema.index(
   { unique: true }
 );
 
-// Helps retrieve a buyer's records by date.
 milkRecordSchema.index({ buyer: 1, recordDate: 1 });
+
+milkRecordSchema.index({ recordDate: 1 });
 
 const MilkRecord = mongoose.model("MilkRecord", milkRecordSchema);
 

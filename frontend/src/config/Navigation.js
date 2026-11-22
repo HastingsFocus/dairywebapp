@@ -7,6 +7,10 @@ import {
   BarChart3,
   Settings,
   UserCircle,
+  Banknote,
+  FileText,
+  Wallet,
+  HandCoins,
 } from "lucide-react";
 
 export const navigation = {
@@ -51,6 +55,21 @@ export const navigation = {
       path: "/owner/milk-records",
       icon: Milk,
     },
+    {
+      name: "Milk Pricing",
+      path: "/owner/milk-pricing",
+      icon: Banknote,
+    },
+    {
+      name: "Financial Reports",
+      path: "/owner/financial-reports",
+      icon: FileText,
+    },
+    {
+  name: "Loan Management",
+  path: "/owner/loans",
+  icon: HandCoins,
+},
     {
       name: "Reports",
       path: "/owner/reports",
@@ -103,6 +122,16 @@ export const navigation = {
       name: "My Milk Records",
       path: "/farmer/records",
       icon: Milk,
+    },
+    {
+      name: "My Financial Report",
+      path: "/farmer/financial-report",
+      icon: Wallet,
+    },
+    {
+      name: "Loan Centre",
+      path: "/farmer/loans",
+      icon: HandCoins,
     },
     {
       name: "My Profile",

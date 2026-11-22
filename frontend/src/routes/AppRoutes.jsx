@@ -9,16 +9,29 @@ import { useAuth } from "../context/AuthContext";
 import ProtectedRoute from "../components/ProtectedRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
 
-import Buyer from "../pages/owner/Buyer";
+// Authentication pages
 import SetPassword from "../pages/auth/SetPassword";
 import Login from "../pages/auth/Login";
 import OwnerSignup from "../pages/auth/OwnerSignUp";
-import DashboardHome from "../pages/dashboard/DashboardHome";
-import OwnerMilkRecords from "../pages/owner/MilkRecords";
 
+// Dashboard
+import DashboardHome from "../pages/dashboard/DashboardHome";
+
+// Owner pages
+import Buyer from "../pages/owner/Buyer";
+import OwnerMilkRecords from "../pages/owner/MilkRecords";
+import MilkPricing from "../pages/owner/MilkPricing";
+import FinancialReports from "../pages/owner/FinancialReports";
+import LoanManagement from "../pages/owner/LoanManagement";
+
+// Buyer pages
 import Farmers from "../pages/buyers/Farmers";
 import MilkRecords from "../pages/buyers/MilkRecords";
+
+// Farmer pages
 import MyMilkRecords from "../pages/farmers/MyMilkRecords";
+import MyFinancialReport from "../pages/farmers/MyFinancialReport";
+import LoanApplication from "../pages/farmers/LoanApplication";
 
 const RoleHome = () => {
   const { user } = useAuth();
@@ -90,9 +103,33 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={["owner"]} />}>
         <Route element={<DashboardLayout />}>
           <Route path="/owner" element={<DashboardHome />} />
+
           <Route path="/owner/buyers" element={<Buyer />} />
-           <Route path="/owner/milk-records" element={<OwnerMilkRecords />} />
-          <Route path="/owner/reports" element={<DashboardHome />} />
+
+          <Route
+            path="/owner/milk-records"
+            element={<OwnerMilkRecords />}
+          />
+
+          <Route
+            path="/owner/milk-pricing"
+            element={<MilkPricing />}
+          />
+
+          <Route
+            path="/owner/financial-reports"
+            element={<FinancialReports />}
+          />
+
+          <Route
+  path="/owner/loans"
+  element={<LoanManagement />}
+/>
+
+          <Route
+            path="/owner/reports"
+            element={<DashboardHome />}
+          />
         </Route>
       </Route>
 
@@ -100,9 +137,18 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={["buyer"]} />}>
         <Route element={<DashboardLayout />}>
           <Route path="/buyer" element={<DashboardHome />} />
+
           <Route path="/buyer/farmers" element={<Farmers />} />
-          <Route path="/buyer/milk-records" element={<MilkRecords />} />
-          <Route path="/buyer/reports" element={<DashboardHome />} />
+
+          <Route
+            path="/buyer/milk-records"
+            element={<MilkRecords />}
+          />
+
+          <Route
+            path="/buyer/reports"
+            element={<DashboardHome />}
+          />
         </Route>
       </Route>
 
@@ -110,9 +156,20 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={["farmer"]} />}>
         <Route element={<DashboardLayout />}>
           <Route path="/farmer" element={<DashboardHome />} />
+
           <Route
             path="/farmer/records"
             element={<MyMilkRecords />}
+          />
+
+          <Route
+            path="/farmer/financial-report"
+            element={<MyFinancialReport />}
+          />
+
+          <Route
+            path="/farmer/loans"
+            element={<LoanApplication />}
           />
         </Route>
       </Route>
