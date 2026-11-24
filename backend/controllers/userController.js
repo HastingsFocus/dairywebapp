@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
+import normalizeMalawiPhone from "../utils/normalizePhone.js";
 
 
 
@@ -22,44 +23,71 @@ export const createFarmer = async (req, res) => {
       });
     }
 
-    // Normalize the email address
+    // Normalize email
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check for an existing account
-    const existing = await User.findOne({
+    // Normalize Malawi phone number
+    let normalizedPhone;
+
+    try {
+      normalizedPhone = normalizeMalawiPhone(phone);
+    } catch (error) {
+      return res.status(400).json({
+        message: error.message,
+      });
+    }
+
+    // Check existing email
+    const existingEmail = await User.findOne({
       email: normalizedEmail,
     });
 
-    if (existing) {
+    if (existingEmail) {
       return res.status(409).json({
         message: "A user with this email already exists.",
       });
     }
 
-    // Ensure the frontend URL is configured
-    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, "");
+    // Check existing farmer phone
+    const existingPhone = await User.findOne({
+      role: "farmer",
+      phone: normalizedPhone,
+    });
+
+    if (existingPhone) {
+      return res.status(409).json({
+        message:
+          "This phone number is already registered to another farmer.",
+      });
+    }
+
+    // Get frontend URL
+    const frontendUrl = process.env.FRONTEND_URL?.replace(/\/+$/, "");
 
     if (!frontendUrl) {
-      console.error("FRONTEND_URL is missing from the backend environment.");
+      console.error("FRONTEND_URL is missing.");
 
       return res.status(500).json({
         message: "Farmer invitation could not be configured.",
       });
     }
 
-    // Generate a secure password setup token
+    // Generate secure password setup token
     const rawToken = crypto.randomBytes(32).toString("hex");
 
+    // Hash token before saving to database
     const hashedToken = crypto
       .createHash("sha256")
       .update(rawToken)
       .digest("hex");
 
-    // Create the farmer account
+    // Create farmer account
     farmer = await User.create({
       fullName: fullName.trim(),
       email: normalizedEmail,
-      phone: phone.trim(),
+      phone: normalizedPhone,
+      phoneVerified: false,
+      phoneVerifiedAt: null,
       location: location.trim(),
       role: "farmer",
       createdBy: req.user._id,
@@ -71,22 +99,33 @@ export const createFarmer = async (req, res) => {
       ),
     });
 
-    // Create the password setup link
+    // Generate frontend password setup URL
     const setupUrl = `${frontendUrl}/set-password/${rawToken}`;
 
-    // Send the invitation email
+    console.log("Farmer password setup URL:", setupUrl);
+
+    // Send invitation email
     await sendEmail({
       to: normalizedEmail,
       subject: "Welcome to the Dairy Records System",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-          <h2>Welcome to the Dairy Records System!</h2>
+        <div style="
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: auto;
+          padding: 20px;
+          color: #333;
+        ">
+
+          <h2 style="color: #15803d;">
+            Welcome to the Dairy Records System!
+          </h2>
 
           <p>Hello ${fullName.trim()},</p>
 
           <p>
-            A dairy buyer has created an account for you in the
-            Dairy Records System.
+            A dairy buyer has created an account for you
+            in the Dairy Records System.
           </p>
 
           <p>
@@ -94,21 +133,24 @@ export const createFarmer = async (req, res) => {
             to create your password.
           </p>
 
-          <p style="margin: 30px 0;">
+          <div style="margin: 30px 0;">
             <a
               href="${setupUrl}"
+              target="_blank"
+              rel="noopener noreferrer"
               style="
                 background-color: #15803d;
-                color: white;
-                padding: 12px 22px;
+                color: #ffffff;
+                padding: 14px 24px;
                 text-decoration: none;
                 border-radius: 6px;
                 display: inline-block;
+                font-weight: bold;
               "
             >
               Set My Password
             </a>
-          </p>
+          </div>
 
           <p>
             This link expires in 24 hours and can only be used
@@ -116,11 +158,26 @@ export const createFarmer = async (req, res) => {
           </p>
 
           <p>
-            If you were not expecting this invitation, please
-            contact your dairy buyer.
+            If the button does not work, copy and paste this
+            link into your browser:
           </p>
 
-          <p>Regards,<br />Dairy Records System</p>
+          <p style="word-break: break-all;">
+            <a href="${setupUrl}">
+              ${setupUrl}
+            </a>
+          </p>
+
+          <p>
+            If you were not expecting this invitation,
+            please contact your dairy buyer.
+          </p>
+
+          <p>
+            Regards,<br />
+            Dairy Records System
+          </p>
+
         </div>
       `,
     });
@@ -133,6 +190,7 @@ export const createFarmer = async (req, res) => {
         fullName: farmer.fullName,
         email: farmer.email,
         phone: farmer.phone,
+        phoneVerified: farmer.phoneVerified,
         location: farmer.location,
         role: farmer.role,
         isActive: farmer.isActive,
@@ -140,24 +198,38 @@ export const createFarmer = async (req, res) => {
         createdAt: farmer.createdAt,
       },
     });
+
   } catch (error) {
     console.error("Create farmer error:", error);
 
-    // Delete the account if creation succeeded but invitation failed
+    // Clean up farmer if invitation failed
     if (farmer?._id) {
       try {
         await User.findByIdAndDelete(farmer._id);
       } catch (cleanupError) {
         console.error(
-          "Failed to clean up farmer after invitation error:",
+          "Failed to clean up farmer:",
           cleanupError
         );
       }
     }
 
     if (error.code === 11000) {
+      if (error.keyPattern?.phone) {
+        return res.status(409).json({
+          message:
+            "This phone number is already registered to another farmer.",
+        });
+      }
+
+      if (error.keyPattern?.email) {
+        return res.status(409).json({
+          message: "A user with this email already exists.",
+        });
+      }
+
       return res.status(409).json({
-        message: "A user with this email already exists.",
+        message: "A farmer with these details already exists.",
       });
     }
 
@@ -167,7 +239,6 @@ export const createFarmer = async (req, res) => {
     });
   }
 };
-
 
 
 export const createBuyer = async (req, res) => {
@@ -424,6 +495,189 @@ export const getFarmerById = async (req, res) => {
 
     return res.status(500).json({
       message: "Unable to retrieve farmer details.",
+    });
+  }
+};
+
+const hashVerificationCode = (code) =>
+  crypto.createHash("sha256").update(code).digest("hex");
+
+// Request a phone verification OTP.
+export const requestFarmerPhoneVerification = async (req, res) => {
+  try {
+    const farmer = await User.findOne({
+      _id: req.user._id,
+      role: "farmer",
+    });
+
+    if (!farmer) {
+      return res.status(404).json({
+        message: "Farmer account not found.",
+      });
+    }
+
+    if (!farmer.isActive || !farmer.passwordSet) {
+      return res.status(403).json({
+        message: "Please activate your account before verifying your phone.",
+      });
+    }
+
+    if (farmer.phoneVerified) {
+      return res.status(400).json({
+        message: "Your phone number is already verified.",
+      });
+    }
+
+    if (!farmer.phone) {
+      return res.status(400).json({
+        message: "Your account does not have a registered phone number.",
+      });
+    }
+
+    // Allow one OTP request every 60 seconds.
+    const cooldownMs = 60 * 1000;
+
+    if (
+      farmer.phoneVerificationLastSentAt &&
+      Date.now() - farmer.phoneVerificationLastSentAt.getTime() < cooldownMs
+    ) {
+      const secondsRemaining = Math.ceil(
+        (cooldownMs -
+          (Date.now() - farmer.phoneVerificationLastSentAt.getTime())) /
+          1000
+      );
+
+      return res.status(429).json({
+        message: `Please wait ${secondsRemaining} seconds before requesting another code.`,
+      });
+    }
+
+    // Generate a six-digit OTP.
+    const otp = crypto.randomInt(100000, 1000000).toString();
+
+    farmer.phoneVerificationCode = hashVerificationCode(otp);
+    farmer.phoneVerificationExpires = new Date(Date.now() + 5 * 60 * 1000);
+    farmer.phoneVerificationAttempts = 0;
+    farmer.phoneVerificationLastSentAt = new Date();
+
+    await farmer.save();
+
+    // Local testing only. We will replace this with SMS delivery.
+    if (process.env.NODE_ENV !== "production") {
+      return res.status(200).json({
+        message: "Verification code generated. Check the development OTP.",
+        ...(process.env.NODE_ENV === "development" && {
+          developmentOtp: otp,
+        }),
+        expiresIn: 300,
+      });
+    }
+
+    return res.status(503).json({
+      message: "SMS delivery has not been configured yet.",
+    });
+  } catch (error) {
+    console.error("Request phone verification error:", error);
+
+    return res.status(500).json({
+      message: "Unable to generate a phone verification code.",
+    });
+  }
+};
+
+// Verify the farmer's phone number using the OTP.
+export const verifyFarmerPhone = async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!/^\d{6}$/.test(String(code || ""))) {
+      return res.status(400).json({
+        message: "Enter a valid six-digit verification code.",
+      });
+    }
+
+    const farmer = await User.findOne({
+      _id: req.user._id,
+      role: "farmer",
+    }).select("+phoneVerificationCode");
+
+    if (!farmer) {
+      return res.status(404).json({
+        message: "Farmer account not found.",
+      });
+    }
+
+    if (farmer.phoneVerified) {
+      return res.status(400).json({
+        message: "Your phone number is already verified.",
+      });
+    }
+
+    if (
+      !farmer.phoneVerificationCode ||
+      !farmer.phoneVerificationExpires
+    ) {
+      return res.status(400).json({
+        message: "Request a verification code first.",
+      });
+    }
+
+    if (farmer.phoneVerificationExpires.getTime() < Date.now()) {
+      farmer.phoneVerificationCode = null;
+      farmer.phoneVerificationExpires = null;
+      farmer.phoneVerificationAttempts = 0;
+      await farmer.save();
+
+      return res.status(400).json({
+        message: "Your verification code has expired. Request a new one.",
+      });
+    }
+
+    if (farmer.phoneVerificationAttempts >= 5) {
+      farmer.phoneVerificationCode = null;
+      farmer.phoneVerificationExpires = null;
+      farmer.phoneVerificationAttempts = 0;
+      await farmer.save();
+
+      return res.status(429).json({
+        message: "Too many incorrect attempts. Request a new verification code.",
+      });
+    }
+
+    const submittedHash = hashVerificationCode(String(code));
+    const storedHash = farmer.phoneVerificationCode;
+
+    if (submittedHash !== storedHash) {
+      farmer.phoneVerificationAttempts += 1;
+      await farmer.save();
+
+      return res.status(400).json({
+        message: "Incorrect verification code.",
+        attemptsRemaining: Math.max(
+          0,
+          5 - farmer.phoneVerificationAttempts
+        ),
+      });
+    }
+
+    farmer.phoneVerified = true;
+    farmer.phoneVerifiedAt = new Date();
+    farmer.phoneVerificationCode = null;
+    farmer.phoneVerificationExpires = null;
+    farmer.phoneVerificationAttempts = 0;
+
+    await farmer.save();
+
+    return res.status(200).json({
+      message: "Your phone number has been verified successfully.",
+      phoneVerified: farmer.phoneVerified,
+      phoneVerifiedAt: farmer.phoneVerifiedAt,
+    });
+  } catch (error) {
+    console.error("Verify farmer phone error:", error);
+
+    return res.status(500).json({
+      message: "Unable to verify your phone number.",
     });
   }
 };
