@@ -67,14 +67,25 @@ const userSchema = new mongoose.Schema(
 
     // USSD authentication fields - used in a later phase
     ussdPin: {
-      type: String,
-      default: null,
-    },
+  type: String,
+  default: null,
+  select: false,
+},
 
-    ussdPinSet: {
-      type: Boolean,
-      default: false,
-    },
+ussdPinSet: {
+  type: Boolean,
+  default: false,
+},
+
+ussdPinAttempts: {
+  type: Number,
+  default: 0,
+},
+
+ussdPinLockedUntil: {
+  type: Date,
+  default: null,
+},
 
     location: {
       type: String,

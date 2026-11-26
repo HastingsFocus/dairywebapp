@@ -17,6 +17,7 @@ import financialReportRoutes from "./routes/financialReportRoutes.js";
 import loanRoutes from "./routes/loanRoutes.js";
 import settlementRoutes from "./routes/settlementRoutes.js";
 //import emailAuthRoutes from "./routes/emailAuthRoutes.js";
+import ussdRoutes from "./routes/ussdRoutes.js";
 
 dotenv.config();
 
@@ -54,6 +55,7 @@ app.options(
 );
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 app.get("/", (req, res) => {
   res.json({
@@ -69,6 +71,7 @@ app.use("/api/milk-prices", milkPriceRoutes);
 app.use("/api/financial-reports", financialReportRoutes);
 app.use("/api/loans", loanRoutes);
 app.use("/api/settlements", settlementRoutes);
+app.use("/api/ussd", ussdRoutes);
 
 // Temporary Gmail OAuth setup routes
 //app.use(emailAuthRoutes);
